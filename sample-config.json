@@ -1,0 +1,46 @@
+{
+  "graphDbLocation": "/development/workspace/neo4j/graph.db",
+  "osmFileLocation": "/workspace/in.osm",
+  "osmId": "madison",
+  "postgis": {
+    "host": "172.20.0.252",
+    "port": "5434",
+    "database": "osm",
+    "user": "osm",
+    "password": "osm",
+    "schema": "adjacentroads_madison"
+  },
+  "adjacentRoads": {
+    "compTable": {
+      "nodeTableSuffix": "_load_nodes_comp",
+      "wayTableSuffix": "_load_ways_comp"
+    },
+    "tables": [
+      {
+        "name": "osm_landusages",
+        "geometryType": "polygon",
+        "types": [
+          "park",
+          "theatre",
+          "garden",
+          "townhall",
+          "courthouse",
+          "cinema",
+          "nature_reserve",
+          "grave_yard",
+          "studio",
+          "attraction",
+          "nature"
+        ]
+      },
+      {
+        "name": "osm_waterareas",
+        "geometryType": "polygon",
+        "types": [
+          "water",
+          "riverbank"
+        ]
+      }
+    ]
+  }
+}
