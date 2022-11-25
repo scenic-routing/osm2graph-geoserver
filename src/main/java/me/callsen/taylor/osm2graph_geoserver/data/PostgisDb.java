@@ -6,8 +6,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import org.codehaus.jettison.json.JSONArray;
 import org.json.JSONObject;
 import org.neo4j.graphdb.Relationship;
 
@@ -49,7 +51,7 @@ public class PostgisDb {
       System.out.println( String.format("sequence creation: %d", executeUpdate(sequenceSql)) );
       
       // create table - must double quote some column names to ensure camelcase
-      String tableSql = String.format("CREATE TABLE IF NOT EXISTS %s.\"%s\"( id bigint NOT NULL DEFAULT nextval('%s.%s_id_seq'::regclass), osm_id bigint, \"%s\" character varying, geom geometry(Geometry,4326), \"relationshipData\" hstore DEFAULT ''::hstore )",
+      String tableSql = String.format("CREATE TABLE IF NOT EXISTS %s.\"%s\"( id bigint NOT NULL DEFAULT nextval('%s.%s_id_seq'::regclass), osm_id bigint, geom geometry(Geometry,4326), \"%s\" json, \"relationshipData\" json )",
         this.postgisSchema,
         associatedDataPropertyTableName,
         this.postgisSchema,
@@ -67,22 +69,36 @@ public class PostgisDb {
 
     //derive optional values
     long rel_osm_id = rel.getProperty("osm_id") instanceof Integer ? (Integer) rel.getProperty("osm_id") : (Long)rel.getProperty("osm_id");
-    String associatedData = (String) rel.getProperty(associatedDataProperty);
+    String[] associatedData = (String[]) rel.getProperty(associatedDataProperty);
     String wayGeometry = (String) rel.getProperty("way");
 
-    // TODO: flatten relationship to JSON object
-    JSONObject relationshipJson = new JSONObject();
-    
-    // TODO: figure out how to insert visualization row
+    // flatten associatedData to JSON array
+    JSONArray associdatedDataArray = new JSONArray();
+    for (String associatedDataEntry : associatedData) {
+      associdatedDataArray.put(new JSONObject(associatedDataEntry));
+    }
 
+    // flatten relationship to JSON object
+    JSONObject relationshipJson = new JSONObject();
+    for (Map.Entry<String, Object> entry : rel.getAllProperties().entrySet()) {
+      String propertyName = entry.getKey();
+      // skip associatedData and geom properties since written on row already
+      if (propertyName.equals(ASSOCIATED_DATA_PROPERTY) || 
+          propertyName.equals(associatedDataPropertyTableName) ||  
+          propertyName.equals("way")) {
+        continue;
+      }
+      relationshipJson.put(propertyName, entry.getValue());
+    }
+    
     //execute insert statement
-    String insertSql = String.format("INSERT INTO %s.%s (osm_id, \"%s\", geom, \"relationshipData\") VALUES (%s, %s, ST_GeomFromText('%s',4326), '%s');", 
+    String insertSql = String.format("INSERT INTO %s.%s (osm_id, geom, \"%s\", \"relationshipData\") VALUES (%s, ST_GeomFromText('%s',4326), '%s'::json, '%s'::json);", 
       this.postgisSchema,
       associatedDataPropertyTableName,
       ASSOCIATED_DATA_PROPERTY,
       rel_osm_id,
-      associatedData,
       wayGeometry,
+      associdatedDataArray.toString(),
       relationshipJson.toString());
 
     executeUpdate( insertSql );
