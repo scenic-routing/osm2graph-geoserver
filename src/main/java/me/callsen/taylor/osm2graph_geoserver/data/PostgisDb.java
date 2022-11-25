@@ -65,18 +65,18 @@ public class PostgisDb {
 
   public void writeVisualizationTableRow(String associatedDataPropertyTableName, String associatedDataProperty, Relationship rel) {
 
-		//derive optional values
-		long rel_osm_id = rel.getProperty("osm_id") instanceof Integer ? (Integer) rel.getProperty("osm_id") : (Long)rel.getProperty("osm_id");
-		String associatedData = (String) rel.getProperty(associatedDataProperty);
-		String wayGeometry = (String) rel.getProperty("way");
+    //derive optional values
+    long rel_osm_id = rel.getProperty("osm_id") instanceof Integer ? (Integer) rel.getProperty("osm_id") : (Long)rel.getProperty("osm_id");
+    String associatedData = (String) rel.getProperty(associatedDataProperty);
+    String wayGeometry = (String) rel.getProperty("way");
 
     // TODO: flatten relationship to JSON object
     JSONObject relationshipJson = new JSONObject();
-		
+    
     // TODO: figure out how to insert visualization row
 
-		//execute insert statement
-		String insertSql = String.format("INSERT INTO %s.%s (osm_id, \"%s\", geom, \"relationshipData\") VALUES (%s, %s, ST_GeomFromText('%s',4326), '%s');", 
+    //execute insert statement
+    String insertSql = String.format("INSERT INTO %s.%s (osm_id, \"%s\", geom, \"relationshipData\") VALUES (%s, %s, ST_GeomFromText('%s',4326), '%s');", 
       this.postgisSchema,
       associatedDataPropertyTableName,
       ASSOCIATED_DATA_PROPERTY,
@@ -85,7 +85,7 @@ public class PostgisDb {
       wayGeometry,
       relationshipJson.toString());
 
-		executeUpdate( insertSql );
+    executeUpdate( insertSql );
   }
   
   public String executeQuery( String sql, int columnNum ) {

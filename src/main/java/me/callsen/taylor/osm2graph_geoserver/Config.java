@@ -19,7 +19,7 @@ public class Config extends JSONObject {
   }
 
   public JSONObject getCompTableConfig() {
-		return this.getJSONObject("adjacentRoads").getJSONObject("compTable");
-	}
+    return this.getJSONObject("adjacentRoads").getJSONObject("compTable");
+  }
   
 }
