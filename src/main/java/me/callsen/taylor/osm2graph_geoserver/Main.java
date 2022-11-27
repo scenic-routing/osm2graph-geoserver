@@ -1,5 +1,6 @@
 package me.callsen.taylor.osm2graph_geoserver;
 
+import me.callsen.taylor.osm2graph_geoserver.data.GeoServerRestApi;
 import me.callsen.taylor.osm2graph_geoserver.data.GraphDb;
 import me.callsen.taylor.osm2graph_geoserver.data.PostgisDb;
 
@@ -17,20 +18,24 @@ public class Main {
     //instantiate Config variables - must do in main because of exception handling
     appConfig = new Config();
 
-    //initialize engine (powered by Postgis connection)
     Class.forName("org.postgresql.Driver");
     String postgisUrl = "jdbc:postgresql://" + appConfig.getDbConfig().getString("host") + ":" + appConfig.getDbConfig().getString("port") + "/" + appConfig.getDbConfig().getString("database");
+
+    String graphDbPath = appConfig.getString("graphDbLocation");
+
+    System.out.println("OSM To Geoserver (via Postgis) initialized with following parameters: ");
+    System.out.println("   graphDb: " + graphDbPath);
+    System.out.println("   postgis: " + postgisUrl);
+    System.out.println(" geoserver: " + GeoServerRestApi.getBaseUrl(appConfig.getGeoServerConfig()));
 
     // initialize PostGis
     PostgisDb postgisDb = new PostgisDb( appConfig, postgisUrl );
 
-    // Initialize GraphDB wrapper - facilitates loading of data into Neo4j Graph
-    String graphDbPath = appConfig.getString("graphDbLocation");
+    // initialize GraphDB wrapper - facilitates loading of data into Neo4j Graph
     GraphDb graphDb = new GraphDb(graphDbPath);
 
-    System.out.println("OSM To Geoserver (via Postgis) Initialized with following parameters: ");
-    System.out.println("   graphDb: " + graphDbPath);
-    System.out.println("   postgis: " + postgisUrl);
+    // initialize GeoServer wrapper
+    GeoServerRestApi.initializeWorkspace(appConfig); // create workspace and store
 
     // retrieve number of relationships - single relationship is returned per pair_id since visually cannot
     //  differentiate between 2 stacked relationships/ways

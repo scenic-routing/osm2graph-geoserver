@@ -18,6 +18,10 @@ public class Config extends JSONObject {
     return this.getJSONObject("postgis");
   }
 
+  public JSONObject getGeoServerConfig() {
+    return this.getJSONObject("geoserver");
+  }
+
   public JSONObject getCompTableConfig() {
     return this.getJSONObject("adjacentRoads").getJSONObject("compTable");
   }

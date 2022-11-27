@@ -10,6 +10,14 @@
     "password": "osm",
     "schema": "adjacentroads_madison"
   },
+  "geoserver": {
+    "host": "172.20.0.252",
+    "port": "8080",
+    "user": "geoserver",
+    "password": "geoserver",
+    "workspaceName": "routing",
+    "storeName": "postgis-default"
+  },
   "adjacentRoads": {
     "compTable": {
       "nodeTableSuffix": "_load_nodes_comp",
