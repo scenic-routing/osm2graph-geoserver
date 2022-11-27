@@ -23,6 +23,8 @@ public class GraphDb {
   public GraphDatabaseService db;
   private DatabaseManagementService managementService;
 
+  private Transaction sharedTransaction;
+
   public GraphDb(String graphDbPath) throws Exception {
     
     // initialize graph db connection
@@ -31,6 +33,22 @@ public class GraphDb {
     // db = new GraphDatabaseFactory().newEmbeddedDatabase( new File( graphDbPath ) );
     System.out.println("Graph DB @ " + graphDbPath + " initialized");
 
+  }
+
+  public Transaction getSharedTransaction() {
+    if (this.sharedTransaction != null) {
+      return sharedTransaction;
+    } else {
+      this.sharedTransaction = this.db.beginTx();
+      return this.sharedTransaction;
+    }
+  }
+
+  public void closeSharedTransaction() {
+    if (this.sharedTransaction != null) {
+      this.sharedTransaction.close();
+      this.sharedTransaction = null;
+    }
   }
 
   public long getUniqueRelationshipCount() {
@@ -50,34 +68,10 @@ public class GraphDb {
     return count;
   }
 
-  public void processRelationshipPage(PostgisDb postgisDb, int pageNumber) {
-    
+  public Result getRelationshipPage(Transaction tx, int pageNumber) {
     long startIndex = pageNumber * GRAPH_PAGINATION_AMOUNT;
-    
-    // loop through relationships returned in page
-    Transaction tx = this.db.beginTx();
-    try ( Result result = tx.execute( String.format("MATCH ()-[r]-() WHERE NOT isEmpty(r.associatedData) RETURN DISTINCT r.pair_id as pair_id, last(collect(r)) as way SKIP %s LIMIT %s", startIndex, GRAPH_PAGINATION_AMOUNT ) ) ) {
-      while ( result.hasNext() ) {
-        Map<String, Object> row = result.next();
-        Relationship relationship = (Relationship)row.get("way");
-
-        // loop through property names in associatedData - ensure uniqueness of property names
-        Set<String> associatedDataPropertySet = new HashSet<>(Arrays.asList((String[]) relationship.getProperty(ASSOCIATED_DATA_PROPERTY)));
-
-        for (String associatedDataProperty : associatedDataPropertySet) {
-          
-          // ensure Postgis table has been created for property
-          // TODO: add logic to create GeoServer layer
-          String associatedDataPropertyTableName = postgisDb.ensureVisualizationTableExists(associatedDataProperty);
-
-          // write relationship to Postgis visualization table
-          postgisDb.writeVisualizationTableRow(associatedDataPropertyTableName, associatedDataProperty, relationship);
-        }
-
-      }
-    } finally {
-      tx.close();  
-    }
+    Result result = tx.execute( String.format("MATCH ()-[r]-() WHERE NOT isEmpty(r.associatedData) RETURN DISTINCT r.pair_id as pair_id, last(collect(r)) as way SKIP %s LIMIT %s", startIndex, GRAPH_PAGINATION_AMOUNT ) );
+    return result;
   }
 
   public void shutdown(){

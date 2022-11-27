@@ -1,5 +1,14 @@
 package me.callsen.taylor.osm2graph_geoserver;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+
 import me.callsen.taylor.osm2graph_geoserver.data.GeoServerRestApi;
 import me.callsen.taylor.osm2graph_geoserver.data.GraphDb;
 import me.callsen.taylor.osm2graph_geoserver.data.PostgisDb;
@@ -44,7 +53,7 @@ public class Main {
 
     for (int pageNumber = 0; pageNumber * GRAPH_PAGINATION_AMOUNT < wayCount; ++pageNumber) {
       System.out.println(String.format("Processing page %s, up to relationship %s", pageNumber, (pageNumber + 1) * GRAPH_PAGINATION_AMOUNT));
-      graphDb.processRelationshipPage(postgisDb, pageNumber);
+      processRelationshipPage(graphDb, postgisDb, pageNumber);
     }
 
     // Close database connections
@@ -53,6 +62,34 @@ public class Main {
 
     System.out.println("Task complete");
 
+  }
+
+  public static void processRelationshipPage(GraphDb graphDb, PostgisDb postgisDb, int pageNumber) {
+    
+    Transaction tx = graphDb.getSharedTransaction();
+    Result result = graphDb.getRelationshipPage(tx, pageNumber);
+
+    // loop through relationships returned in page
+    while ( result.hasNext() ) {
+      Map<String, Object> row = result.next();
+      Relationship relationship = (Relationship)row.get("way");
+
+      // loop through property names in associatedData - ensure uniqueness of property names
+      Set<String> associatedDataPropertySet = new HashSet<>(Arrays.asList((String[]) relationship.getProperty(ASSOCIATED_DATA_PROPERTY)));
+
+      for (String associatedDataProperty : associatedDataPropertySet) {
+        
+        // ensure Postgis table has been created for property
+        // TODO: add logic to create GeoServer layer
+        String associatedDataPropertyTableName = postgisDb.ensureVisualizationTableExists(associatedDataProperty);
+
+        // write relationship to Postgis visualization table
+        postgisDb.writeVisualizationTableRow(associatedDataPropertyTableName, associatedDataProperty, relationship);
+      }
+
+    }
+
+    graphDb.closeSharedTransaction();
   }
 
 }

@@ -38,7 +38,7 @@ public class GeoServerRestApi {
     } catch (IOException | HttpException e) {
       
       if (e instanceof HttpResponseException && ((HttpResponseException) e).getStatusCode() == 409) {
-        System.out.println("workspace '" + workspaceName + "' already exists");
+        System.out.println("geoserver workspace '" + workspaceName + "' already exists");
       } else {
         System.out.println("FAILED to create geoserver workspace: " + e.getMessage());
         e.printStackTrace();
@@ -71,7 +71,7 @@ public class GeoServerRestApi {
     } catch (HttpException | IOException e) {
       
       if (e instanceof HttpResponseException && ((HttpResponseException) e).getMessage().contains("already exists")) {
-        System.out.println("store '" + datastoreName + "' already exists");
+        System.out.println("geoserver store '" + datastoreName + "' already exists");
       } else {
         System.out.println("FAILED to create postgis store '" + datastoreName + "' in geoserver with message: " + e.getMessage());
         e.printStackTrace();
