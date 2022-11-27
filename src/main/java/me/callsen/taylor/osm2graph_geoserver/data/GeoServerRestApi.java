@@ -93,8 +93,12 @@ public class GeoServerRestApi {
     try {
       HttpClient.invokePost(featureTypesUrl, authHeader, postBody, MediaType.APPLICATION_XML);
     } catch (HttpException | IOException e) {
-      System.out.println("FAILED to create geoserver featuretype '" + featureTypeName + "' with message: " + e.getMessage());
-      e.printStackTrace();
+      if (e instanceof HttpResponseException && ((HttpResponseException) e).getMessage().contains("already exists")) {
+        System.out.println("geoserver featureType '" + featureTypeName + "' already exists");
+      } else {
+        System.out.println("FAILED to create geoserver featuretype '" + featureTypeName + "' with message: " + e.getMessage());
+        e.printStackTrace();
+      }
     }
 
   }

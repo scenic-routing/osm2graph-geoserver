@@ -1,10 +1,12 @@
 package me.callsen.taylor.osm2graph_geoserver;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.json.JSONObject;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -53,7 +55,7 @@ public class Main {
 
     for (int pageNumber = 0; pageNumber * GRAPH_PAGINATION_AMOUNT < wayCount; ++pageNumber) {
       System.out.println(String.format("Processing page %s, up to relationship %s", pageNumber, (pageNumber + 1) * GRAPH_PAGINATION_AMOUNT));
-      processRelationshipPage(graphDb, postgisDb, pageNumber);
+      processRelationshipPage(appConfig, graphDb, postgisDb, pageNumber);
     }
 
     // Close database connections
@@ -64,10 +66,16 @@ public class Main {
 
   }
 
-  public static void processRelationshipPage(GraphDb graphDb, PostgisDb postgisDb, int pageNumber) {
+  public static void processRelationshipPage(Config appConfig, GraphDb graphDb, PostgisDb postgisDb, int pageNumber) {
     
     Transaction tx = graphDb.getSharedTransaction();
     Result result = graphDb.getRelationshipPage(tx, pageNumber);
+    
+    // GeoServer config
+    JSONObject geoServerConfig = appConfig.getGeoServerConfig();
+    String geoserverBaseUrl = GeoServerRestApi.getBaseUrl(geoServerConfig);
+    String geoserverAuthHeader = GeoServerRestApi.getAuthHeader(geoServerConfig);
+    Set<String> featureTypesCreated = new HashSet<>();
 
     // loop through relationships returned in page
     while ( result.hasNext() ) {
@@ -80,8 +88,14 @@ public class Main {
       for (String associatedDataProperty : associatedDataPropertySet) {
         
         // ensure Postgis table has been created for property
-        // TODO: add logic to create GeoServer layer
         String associatedDataPropertyTableName = postgisDb.ensureVisualizationTableExists(associatedDataProperty);
+
+        // create featureType / layer in GeoServer (if not already created)
+        if (!featureTypesCreated.contains(associatedDataPropertyTableName)) {
+          System.out.println("creating geoserver featureType '" + associatedDataPropertyTableName + "'");
+          GeoServerRestApi.createFeatureType(geoserverBaseUrl, geoserverAuthHeader, geoServerConfig.getString("workspaceName"), geoServerConfig.getString("storeName"), associatedDataPropertyTableName);
+          featureTypesCreated.add(associatedDataPropertyTableName);
+        }
 
         // write relationship to Postgis visualization table
         postgisDb.writeVisualizationTableRow(associatedDataPropertyTableName, associatedDataProperty, relationship);
