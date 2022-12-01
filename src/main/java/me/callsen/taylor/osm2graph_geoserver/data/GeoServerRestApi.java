@@ -84,8 +84,9 @@ public class GeoServerRestApi {
       "<name>" + featureTypeName + "</name>" +
       "<enabled>true</enabled>" +
       "<nativeCRS>EPSG:4326</nativeCRS>" +
-      "<srs>EPSG:3857</srs>" +
-	    "<projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>" +
+      "<srs>EPSG:4326</srs>" +
+      "<projectionPolicy>FORCE_DECLARED</projectionPolicy>" +
+      "<recalculate>nativebbox,latlonbbox</recalculate>" +
     "</featureType>";
 
     String featureTypesUrl = String.format("%s/workspaces/%s/datastores/%s/featuretypes", baseUrl, workspaceName, datastoreName);
