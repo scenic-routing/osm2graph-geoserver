@@ -75,7 +75,11 @@ public class Main {
     JSONObject geoServerConfig = appConfig.getGeoServerConfig();
     String geoserverBaseUrl = GeoServerRestApi.getBaseUrl(geoServerConfig);
     String geoserverAuthHeader = GeoServerRestApi.getAuthHeader(geoServerConfig);
-    Set<String> featureTypesCreated = new HashSet<>();
+    
+    String osmId = appConfig.getString("osmId");
+
+    // keep track of which visualization tables have been created (prevent extra calls to DB)
+    Set<String> visDataTablesCreated = new HashSet<>();
 
     // loop through relationships returned in page
     while ( result.hasNext() ) {
@@ -87,20 +91,25 @@ public class Main {
 
       for (String associatedDataProperty : associatedDataPropertySet) {
         
-        // ensure Postgis table has been created for property
-        String associatedDataPropertyTableName = postgisDb.ensureVisualizationTableExists(associatedDataProperty);
+        String associatedDataPropertyTableName = String.format("%s_vis_%s", osmId, associatedDataProperty);
 
-        // create featureType / layer in GeoServer (if not already created)
-        if (!featureTypesCreated.contains(associatedDataPropertyTableName)) {
-          System.out.println("creating geoserver featureType '" + associatedDataPropertyTableName + "'");
-          GeoServerRestApi.createFeatureType(geoserverBaseUrl, geoserverAuthHeader, geoServerConfig.getString("workspaceName"), geoServerConfig.getString("storeName"), associatedDataPropertyTableName);
-          featureTypesCreated.add(associatedDataPropertyTableName);
+        // create vis table in PostGIS if it has not already been created
+        if (!visDataTablesCreated.contains(associatedDataPropertyTableName)) {
+          postgisDb.createVisualizationTable(associatedDataProperty, associatedDataPropertyTableName);
+          visDataTablesCreated.add(associatedDataPropertyTableName);
         }
 
         // write relationship to Postgis visualization table
         postgisDb.writeVisualizationTableRow(associatedDataPropertyTableName, associatedDataProperty, relationship);
       }
 
+    }
+
+    // create featureType / layer in GeoServer (if not already created)
+    //  - this is done after PostGIS data as been loaded so accurate bounding boxes can be computed
+    for (String associatedDataPropertyTableName : visDataTablesCreated) {
+      System.out.println("creating geoserver featureType '" + associatedDataPropertyTableName + "'");
+      GeoServerRestApi.createFeatureType(geoserverBaseUrl, geoserverAuthHeader, geoServerConfig.getString("workspaceName"), geoServerConfig.getString("storeName"), associatedDataPropertyTableName);
     }
 
     graphDb.closeSharedTransaction();
