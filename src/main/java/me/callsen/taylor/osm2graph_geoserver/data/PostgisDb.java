@@ -76,6 +76,10 @@ public class PostgisDb {
       relationshipJson.put(propertyName, entry.getValue());
     }
     
+    //escape single quotes (required by postgis)
+    String associatedDataJsonString = associdatedDataArray.toString().replaceAll("'","''");
+    String relationshipJsonString = relationshipJson.toString().replaceAll("'","''");
+
     //execute insert statement
     String insertSql = String.format("INSERT INTO %s.%s (osm_id, geom, \"%s\", \"relationshipData\") VALUES (%s, ST_GeomFromText('%s',4326), '%s'::json, '%s'::json);", 
       this.postgisSchema,
@@ -83,8 +87,8 @@ public class PostgisDb {
       ASSOCIATED_DATA_PROPERTY,
       rel_osm_id,
       wayGeometry,
-      associdatedDataArray.toString(),
-      relationshipJson.toString());
+      associatedDataJsonString,
+      relationshipJsonString);
 
     executeUpdate( insertSql );
   }
