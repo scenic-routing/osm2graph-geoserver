@@ -1,7 +1,6 @@
 package me.callsen.taylor.osm2graph_geoserver;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +17,10 @@ import me.callsen.taylor.osm2graph_geoserver.data.PostgisDb;
 public class Main {
 
   //shared static objects
-  public static Config appConfig;
+  private static Config appConfig;
+
+  // keep track of which visualization tables have been created (prevent extra calls to DB)
+  private static Set<String> visDataTablesCreated = new HashSet<>();
 
   public static final int GRAPH_PAGINATION_AMOUNT = 5000;
 
@@ -48,14 +50,22 @@ public class Main {
     // initialize GeoServer wrapper
     GeoServerRestApi.initializeWorkspace(appConfig); // create workspace and store
 
-    // retrieve number of relationships - single relationship is returned per pair_id since visually cannot
-    //  differentiate between 2 stacked relationships/ways
-    //  TODO: this logic will need to be revisited for bi-directional support
-    long wayCount = graphDb.getUniqueRelationshipCount();
+    // retrieve number of relationships
+    long wayCount = graphDb.getRelationshipCount();
 
     for (int pageNumber = 0; pageNumber * GRAPH_PAGINATION_AMOUNT < wayCount; ++pageNumber) {
       System.out.println(String.format("Processing page %s, up to relationship %s", pageNumber, (pageNumber + 1) * GRAPH_PAGINATION_AMOUNT));
-      processRelationshipPage(appConfig, graphDb, postgisDb, pageNumber);
+      processRelationshipPage(graphDb, postgisDb, pageNumber);
+    }
+
+    // create featureType / layer in GeoServer
+    //  - this is done after PostGIS data as been loaded so accurate bounding boxes can be computed
+    JSONObject geoServerConfig = appConfig.getGeoServerConfig();
+    String geoserverBaseUrl = GeoServerRestApi.getBaseUrl(geoServerConfig);
+    String geoserverAuthHeader = GeoServerRestApi.getAuthHeader(geoServerConfig);
+    for (String associatedDataPropertyTableName : visDataTablesCreated) {
+      System.out.println("creating geoserver featureType '" + associatedDataPropertyTableName + "'");
+      GeoServerRestApi.createFeatureType(geoserverBaseUrl, geoserverAuthHeader, geoServerConfig.getString("workspaceName"), geoServerConfig.getString("storeName"), associatedDataPropertyTableName);
     }
 
     // Close database connections
@@ -66,20 +76,12 @@ public class Main {
 
   }
 
-  public static void processRelationshipPage(Config appConfig, GraphDb graphDb, PostgisDb postgisDb, int pageNumber) {
+  public static void processRelationshipPage(GraphDb graphDb, PostgisDb postgisDb, int pageNumber) {
     
     Transaction tx = graphDb.getSharedTransaction();
     Result result = graphDb.getRelationshipPage(tx, pageNumber);
     
-    // GeoServer config
-    JSONObject geoServerConfig = appConfig.getGeoServerConfig();
-    String geoserverBaseUrl = GeoServerRestApi.getBaseUrl(geoServerConfig);
-    String geoserverAuthHeader = GeoServerRestApi.getAuthHeader(geoServerConfig);
-    
     String osmId = appConfig.getString("osmId");
-
-    // keep track of which visualization tables have been created (prevent extra calls to DB)
-    Set<String> visDataTablesCreated = new HashSet<>();
 
     // loop through relationships returned in page
     while ( result.hasNext() ) {
@@ -103,13 +105,6 @@ public class Main {
         postgisDb.writeVisualizationTableRow(associatedDataPropertyTableName, associatedDataProperty, relationship);
       }
 
-    }
-
-    // create featureType / layer in GeoServer (if not already created)
-    //  - this is done after PostGIS data as been loaded so accurate bounding boxes can be computed
-    for (String associatedDataPropertyTableName : visDataTablesCreated) {
-      System.out.println("creating geoserver featureType '" + associatedDataPropertyTableName + "'");
-      GeoServerRestApi.createFeatureType(geoserverBaseUrl, geoserverAuthHeader, geoServerConfig.getString("workspaceName"), geoServerConfig.getString("storeName"), associatedDataPropertyTableName);
     }
 
     graphDb.closeSharedTransaction();

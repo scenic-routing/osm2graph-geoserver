@@ -1,54 +1,20 @@
 {
   "graphDbLocation": "/development/workspace/neo4j/graph.db",
-  "osmFileLocation": "/workspace/in.osm",
-  "osmId": "madison",
+  "osmId": "sfsutro",
   "postgis": {
-    "host": "172.20.0.252",
+    "host": "192.168.103.230",
     "port": "5434",
     "database": "osm",
     "user": "osm",
     "password": "osm",
-    "schema": "adjacentroads_madison"
+    "schema": "sfsutro"
   },
   "geoserver": {
-    "host": "172.20.0.252",
+    "host": "192.168.103.230",
     "port": "8080",
     "user": "geoserver",
     "password": "geoserver",
-    "workspaceName": "routing",
-    "storeName": "postgis-default"
-  },
-  "adjacentRoads": {
-    "compTable": {
-      "nodeTableSuffix": "_load_nodes_comp",
-      "wayTableSuffix": "_load_ways_comp"
-    },
-    "tables": [
-      {
-        "name": "osm_landusages",
-        "geometryType": "polygon",
-        "types": [
-          "park",
-          "theatre",
-          "garden",
-          "townhall",
-          "courthouse",
-          "cinema",
-          "nature_reserve",
-          "grave_yard",
-          "studio",
-          "attraction",
-          "nature"
-        ]
-      },
-      {
-        "name": "osm_waterareas",
-        "geometryType": "polygon",
-        "types": [
-          "water",
-          "riverbank"
-        ]
-      }
-    ]
+    "workspaceName": "sfsutro",
+    "storeName": "sfsutro"
   }
 }

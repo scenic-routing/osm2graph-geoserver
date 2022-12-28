@@ -1,21 +1,19 @@
 package me.callsen.taylor.osm2graph_geoserver.data;
 
+import static me.callsen.taylor.osm2graph_geoserver.Main.ASSOCIATED_DATA_PROPERTY;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
-import org.codehaus.jettison.json.JSONArray;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.neo4j.graphdb.Relationship;
 
 import me.callsen.taylor.osm2graph_geoserver.Config;
-
-import static me.callsen.taylor.osm2graph_geoserver.Main.ASSOCIATED_DATA_PROPERTY;
 
 public class PostgisDb {
 
@@ -30,6 +28,11 @@ public class PostgisDb {
 
     conn = DriverManager.getConnection(postgisUrl,appConfig.getDbConfig().getString("user"), appConfig.getDbConfig().getString("password"));
     System.out.println( "PostgisDb initialized and will persist through app completion" );
+
+    // ensure postgis schema exists
+    String schemaName = appConfig.getDbConfig().getString("schema");
+    String sequenceSql = String.format("CREATE SCHEMA IF NOT EXISTS %s", schemaName);
+    System.out.println( String.format("ensure schema '%s' exists: %d", schemaName, executeUpdate(sequenceSql)) );
   }
 
   public void createVisualizationTable(String associatedDataProperty, String associatedDataPropertyTableName) {
@@ -37,7 +40,7 @@ public class PostgisDb {
     System.out.println(String.format("creating visualization table for property %s named %s", associatedDataProperty, associatedDataPropertyTableName));
     
     // create id sequence
-    String sequenceSql = String.format(" CREATE SEQUENCE IF NOT EXISTS %s.%s_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1;", this.postgisSchema, associatedDataPropertyTableName);
+    String sequenceSql = String.format("CREATE SEQUENCE IF NOT EXISTS %s.%s_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1;", this.postgisSchema, associatedDataPropertyTableName);
     System.out.println( String.format("sequence creation: %d", executeUpdate(sequenceSql)) );
     
     // create table - must double quote some column names to ensure camelcase
@@ -52,15 +55,16 @@ public class PostgisDb {
 
   public void writeVisualizationTableRow(String associatedDataPropertyTableName, String associatedDataProperty, Relationship rel) {
 
-    //derive optional values
+    // derive optional values
     long rel_osm_id = rel.getProperty("osm_id") instanceof Integer ? (Integer) rel.getProperty("osm_id") : (Long)rel.getProperty("osm_id");
-    String[] associatedData = (String[]) rel.getProperty(associatedDataProperty);
+    JSONArray associatedData = new JSONArray( (String) rel.getProperty(associatedDataProperty) );
     String wayGeometry = (String) rel.getProperty("way");
 
     // flatten associatedData to JSON array
     JSONArray associdatedDataArray = new JSONArray();
-    for (String associatedDataEntry : associatedData) {
-      associdatedDataArray.put(new JSONObject(associatedDataEntry));
+    for (int i=0; i < associatedData.length(); ++i) {
+      JSONObject associatedDataEntry = associatedData.getJSONObject(i);
+      associdatedDataArray.put(associatedDataEntry);
     }
 
     // flatten relationship to JSON object

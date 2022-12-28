@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>me.callsen.taylor</groupId>
   <artifactId>osm2graph-geoserver</artifactId>
-  <version>0.0.2-SNAPSHOT</version>
+  <version>0.0.3-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>OSM To Geoserver (via Postgis)</name>
   <url>http://maven.apache.org</url>

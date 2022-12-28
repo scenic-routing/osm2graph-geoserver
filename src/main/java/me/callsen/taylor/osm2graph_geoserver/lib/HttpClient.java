@@ -28,7 +28,6 @@ public class HttpClient {
     
     CloseableHttpResponse response = httpClient.execute(httpPost);
 
-
     String result = "";
     HttpEntity entity = response.getEntity();
     if (entity != null) {
