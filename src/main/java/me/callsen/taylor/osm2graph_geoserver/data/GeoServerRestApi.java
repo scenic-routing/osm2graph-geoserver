@@ -22,7 +22,7 @@ public class GeoServerRestApi {
     String baseUrl = getBaseUrl(geoserverConfig);
     String authHeader = getAuthHeader(geoserverConfig);
     
-    createWorkspace(baseUrl, authHeader, "routing");
+    createWorkspace(baseUrl, authHeader, workspaceName);
     createPostGisStore(baseUrl, authHeader, workspaceName, storeName, appConfig);
   }
 
