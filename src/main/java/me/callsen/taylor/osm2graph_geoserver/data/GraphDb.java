@@ -50,7 +50,7 @@ public class GraphDb {
     long count = 0;
 
     Transaction tx = this.db.beginTx();
-    try ( Result result = tx.execute( "MATCH ()-[r]-() WHERE NOT isEmpty(r.associatedData) RETURN COUNT(r) AS total" ) ) {
+    try ( Result result = tx.execute( "MATCH ()-[r]-() WHERE NOT isEmpty(r.associatedData) RETURN COUNT(DISTINCT(r)) AS total" ) ) {
       while ( result.hasNext() ) {
         Map<String, Object> row = result.next();
         count = (Long) row.get("total");
@@ -64,7 +64,7 @@ public class GraphDb {
 
   public Result getRelationshipPage(Transaction tx, int pageNumber) {
     long startIndex = pageNumber * GRAPH_PAGINATION_AMOUNT;
-    Result result = tx.execute( String.format("MATCH ()-[r]-() WHERE NOT isEmpty(r.associatedData) RETURN r as way ORDER BY r.osm_id DESC SKIP %s LIMIT %s", startIndex, GRAPH_PAGINATION_AMOUNT ) );
+    Result result = tx.execute( String.format("MATCH ()-[r]-() WHERE NOT isEmpty(r.associatedData) RETURN DISTINCT(r) as way ORDER BY r.osm_id DESC SKIP %s LIMIT %s", startIndex, GRAPH_PAGINATION_AMOUNT ) );
     return result;
   }
 
