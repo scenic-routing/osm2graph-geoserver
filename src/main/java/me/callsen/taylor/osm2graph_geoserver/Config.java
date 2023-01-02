@@ -13,6 +13,10 @@ public class Config extends JSONObject {
   public Config() throws Exception {  
     super( new String(Files.readAllBytes(Paths.get(configPath)), Charset.defaultCharset()) );
   }
+
+  public Config(JSONObject configObject) throws Exception {
+    super( configObject.toString() );
+  }
   
   public JSONObject getDbConfig() {
     return this.getJSONObject("postgis");
