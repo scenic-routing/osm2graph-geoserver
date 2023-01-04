@@ -2,6 +2,14 @@
   "graphDbLocation": "",
   "osmId": "sfpotrero",
   "postgis": { },
+  "geoserver": {
+    "host": "localhost",
+    "port": "8080",
+    "user": "geoserver",
+    "password": "geoserver",
+    "workspaceName": "sfpotrero",
+    "storeName": "sfpotrero"
+  },
   "adjacentRoads": {
     "compTable": {
       "nodeTableSuffix": "_load_nodes_comp",
