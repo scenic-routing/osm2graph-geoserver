@@ -12,10 +12,14 @@ import org.apache.hc.core5.http.HttpException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 
-// based on https://reflectoring.io/comparison-of-java-http-clients/ Synchronous POST Request with Apahce HTTP Client
+// based on https://reflectoring.io/comparison-of-java-http-clients/
 public class HttpClient {
 
-  public static String invokePost(String url, String authHeader, String postBody, String contentType) throws IOException, HttpException {
+  public HttpClient() {
+    
+  }
+
+  public String invokePost(String url, String authHeader, String postBody, String contentType) throws IOException, HttpException {
    
     StringEntity stringEntity = new StringEntity(postBody);
     HttpPost httpPost = new HttpPost(url);

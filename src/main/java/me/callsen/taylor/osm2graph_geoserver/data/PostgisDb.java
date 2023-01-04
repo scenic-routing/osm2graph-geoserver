@@ -20,11 +20,14 @@ public class PostgisDb {
   private String postgisSchema;
 
   private Connection conn;
+
+  private String postgisUrl;
   
   public PostgisDb( Config appConfig, String postgisUrl ) throws Exception {
     
     //initialize connection to Postgis Shape Source
     this.postgisSchema = appConfig.getDbConfig().getString("schema");
+    this.postgisUrl = postgisUrl;
 
     conn = DriverManager.getConnection(postgisUrl,appConfig.getDbConfig().getString("user"), appConfig.getDbConfig().getString("password"));
     System.out.println( "PostgisDb initialized and will persist through app completion" );
@@ -129,6 +132,10 @@ public class PostgisDb {
     
     return responseInt;
 
+  }
+
+  public String getPostgisUrl() {
+    return this.postgisUrl;
   }
 
   public void close() throws SQLException {
