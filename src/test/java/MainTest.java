@@ -1,4 +1,5 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -6,10 +7,21 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.io.FileUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.XML;
 import org.junit.jupiter.api.BeforeAll;
@@ -90,7 +102,7 @@ public class MainTest {
     postgisConfig.put("database", "osm"); // testcontainers loads all data into the test database..
     postgisConfig.put("user", "osm");
     postgisConfig.put("password", "osm");
-    postgisConfig.put("schema", "adjacentroads_sfpotrero");
+    postgisConfig.put("schema", "test_sfpotrero");
     configObject.put("postgis", postgisConfig);
 
     // set graphdb temp location into config
@@ -105,11 +117,39 @@ public class MainTest {
     // pass mocked httpClient into GeoServerRestApi to intercept & confirm GeoServer calls
     geoServer = new GeoServerRestApi(appConfig, httpClient);
 
-    // execute load logic with testing app config
+    // execute load logic with testing app config - tests below confirm this processing
     Main.loadGeoServerData(appConfig, graphDb, postgisDb, geoServer);
 
-    // populate arguement captors with mock calls
+    // populate arguement captors with arguments from mock calls
     verify(httpClient, times(3)).invokePost(urlCaptor.capture(), authHeaderCaptor.capture(), postBodyCaptor.capture(), contentTypeCaptor.capture());
+  }
+
+  @Test
+  public void testPostgisVisualizationTableRowCount() throws Exception {
+    List<Map<String,Object>> result = executePostgisQuery("SELECT COUNT(*) FROM test_sfpotrero.sfpotrero_vis_osm_landusages");
+    assertEquals(98, (long)result.get(0).get("count"));
+  }
+
+  @Test
+  public void testPostgisVisualizationTableRowProperties() throws Exception {
+    List<Map<String,Object>> result = executePostgisQuery("SELECT osm_id, ST_AsText(geom) as geom, \"associatedData\"::Text, \"relationshipData\"::Text FROM test_sfpotrero.sfpotrero_vis_osm_landusages WHERE id=40");
+    
+    assertEquals(306786518, (long) result.get(0).get("osm_id"));
+    assertEquals("LINESTRING(-122.399779 37.753165,-122.3995458 37.7530642)", (String) result.get(0).get("geom"));
+    
+    // associatedData
+    JSONArray associatedDataArray = new JSONArray((String) result.get(0).get(Main.ASSOCIATED_DATA_PROPERTY));
+    assertEquals(1, associatedDataArray.length());
+    assertEquals(306787829, associatedDataArray.getJSONObject(0).getLong("osm_id"));
+    assertNotNull(associatedDataArray.getJSONObject(0).getString("date_added"));
+    assertEquals("park", associatedDataArray.getJSONObject(0).getString("type"));
+    assertEquals("contains", associatedDataArray.getJSONObject(0).getString("relation"));
+
+    // relationshipData - osm properties
+    JSONObject relationshipData = new JSONObject((String) result.get(0).get("relationshipData"));
+    assertEquals(306786518, relationshipData.getLong("osm_id"));
+    assertNotNull(relationshipData.get("geom"));
+    assertEquals("Coral Road", relationshipData.getString("name"));
   }
 
   @Test
@@ -137,7 +177,7 @@ public class MainTest {
     JSONObject postBody = XML.toJSONObject(postBodyCaptor.getAllValues().get(testCallIndex));
     assertEquals("sfpotrero", postBody.getJSONObject("dataStore").getString("name"));
     JSONObject connectionParameters =  postBody.getJSONObject("dataStore").getJSONObject("connectionParameters");
-    assertEquals("adjacentroads_sfpotrero", connectionParameters.getString("schema"));
+    assertEquals("test_sfpotrero", connectionParameters.getString("schema"));
     assertEquals("osm", connectionParameters.getString("database"));
     assertEquals(postgresqlContainer.getMappedPort(5432), connectionParameters.getInt("port"));
     assertEquals("osm", connectionParameters.getString("passwd"));
@@ -162,6 +202,29 @@ public class MainTest {
     assertEquals("REPROJECT_TO_DECLARED", featureType.getString("projectionPolicy"));
     assertEquals("EPSG:4326", featureType.getString("nativeCRS"));
     assertEquals(true, featureType.getBoolean("enabled"));
+  }
+
+  // TODO: move to shared library
+  private ArrayList<Map<String, Object>> executePostgisQuery(String selectSQL) throws SQLException {
+    Connection conn = DriverManager.getConnection(postgresqlContainer.getJdbcUrl(), "osm", "osm");
+    Statement statement = conn.createStatement();
+    ResultSet rs = statement.executeQuery(selectSQL);
+      
+    ResultSetMetaData md = rs.getMetaData();
+    int columns = md.getColumnCount();
+    ArrayList<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
+    while (rs.next()) {
+      HashMap<String, Object> row = new HashMap<String, Object>(columns);
+      for(int i=1; i<=columns; ++i){           
+        row.put(md.getColumnName(i),rs.getObject(i));
+      }
+      list.add(row);
+    }
+
+    statement.close();
+    rs.close();
+
+    return list;
   }
 
 }

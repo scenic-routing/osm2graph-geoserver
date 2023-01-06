@@ -25,9 +25,5 @@ public class Config extends JSONObject {
   public JSONObject getGeoServerConfig() {
     return this.getJSONObject("geoserver");
   }
-
-  public JSONObject getCompTableConfig() {
-    return this.getJSONObject("adjacentRoads").getJSONObject("compTable");
-  }
   
 }

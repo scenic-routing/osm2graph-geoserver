@@ -2,7 +2,7 @@
   "graphDbLocation": "/development/workspace/neo4j/graph.db",
   "osmId": "sfsutro",
   "postgis": {
-    "host": "192.168.103.230",
+    "host": "localhost",
     "port": "5434",
     "database": "osm",
     "user": "osm",
@@ -10,7 +10,7 @@
     "schema": "sfsutro"
   },
   "geoserver": {
-    "host": "192.168.103.230",
+    "host": "localhost",
     "port": "8080",
     "user": "geoserver",
     "password": "geoserver",

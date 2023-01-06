@@ -9,20 +9,5 @@
     "password": "geoserver",
     "workspaceName": "sfpotrero",
     "storeName": "sfpotrero"
-  },
-  "adjacentRoads": {
-    "compTable": {
-      "nodeTableSuffix": "_load_nodes_comp",
-      "wayTableSuffix": "_load_ways_comp"
-    },
-    "tables": [
-      {
-        "name": "osm_landusages",
-        "geometryType": "polygon",
-        "types": [
-          "park"
-        ]
-      }
-    ]
   }
 }
