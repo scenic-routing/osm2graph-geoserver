@@ -75,6 +75,13 @@
   </build>
   <dependencies>
 
+    <!-- Scenic Routing SDK -->
+    <dependency>
+      <groupId>com.github.scenic-routing</groupId>
+      <artifactId>javasdk</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+
     <!-- Neo4j -->
     <dependency>
       <groupId>org.neo4j</groupId>
@@ -110,6 +117,14 @@
     </dependency>
 
     <!-- Testing -->
+    <dependency>
+      <groupId>com.github.scenic-routing</groupId>
+      <artifactId>javasdk</artifactId>
+      <version>1.2.0</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
@@ -160,5 +175,15 @@
     </dependency>
 
   </dependencies>
+
+  <repositories>
+
+    <!-- Jitpack (for Scenic Routing SDK -->
+    <repository>
+      <id>jitpack.io</id>
+      <url>https://jitpack.io</url>
+    </repository>
+
+  </repositories>
 
 </project>

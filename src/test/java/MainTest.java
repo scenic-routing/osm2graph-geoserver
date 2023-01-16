@@ -7,14 +7,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,9 +34,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import me.callsen.taylor.osm2graph_geoserver.Config;
 import me.callsen.taylor.osm2graph_geoserver.Main;
 import me.callsen.taylor.osm2graph_geoserver.data.GeoServerRestApi;
-import me.callsen.taylor.osm2graph_geoserver.data.GraphDb;
 import me.callsen.taylor.osm2graph_geoserver.data.PostgisDb;
 import me.callsen.taylor.osm2graph_geoserver.lib.HttpClient;
+import me.callsen.taylor.scenicrouting.javasdk.RoutingConstants;
+import me.callsen.taylor.scenicrouting.javasdk.TestUtils;
+import me.callsen.taylor.scenicrouting.javasdk.data.GraphDb;
 
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
@@ -118,7 +112,7 @@ public class MainTest {
     geoServer = new GeoServerRestApi(appConfig, httpClient);
 
     // execute load logic with testing app config - tests below confirm this processing
-    Main.loadGeoServerData(appConfig, graphDb, postgisDb, geoServer);
+    Main.loadGeoServerData(appConfig, graphDb, postgisDb, geoServer, 50);
 
     // populate arguement captors with arguments from mock calls
     verify(httpClient, times(3)).invokePost(urlCaptor.capture(), authHeaderCaptor.capture(), postBodyCaptor.capture(), contentTypeCaptor.capture());
@@ -126,19 +120,19 @@ public class MainTest {
 
   @Test
   public void testPostgisVisualizationTableRowCount() throws Exception {
-    List<Map<String,Object>> result = executePostgisQuery("SELECT COUNT(*) FROM test_sfpotrero.sfpotrero_vis_osm_landusages");
+    List<Map<String,Object>> result = TestUtils.executeJdbcQuery(postgresqlContainer.getJdbcUrl(), "osm", "osm", "SELECT COUNT(*) FROM test_sfpotrero.sfpotrero_vis_osm_landusages");
     assertEquals(98, (long)result.get(0).get("count"));
   }
 
   @Test
   public void testPostgisVisualizationTableRowProperties() throws Exception {
-    List<Map<String,Object>> result = executePostgisQuery("SELECT osm_id, ST_AsText(geom) as geom, \"associatedData\"::Text, \"relationshipData\"::Text FROM test_sfpotrero.sfpotrero_vis_osm_landusages WHERE id=40");
+    List<Map<String,Object>> result = TestUtils.executeJdbcQuery(postgresqlContainer.getJdbcUrl(), "osm", "osm", "SELECT osm_id, ST_AsText(geom) as geom, \"associatedData\"::Text, \"relationshipData\"::Text FROM test_sfpotrero.sfpotrero_vis_osm_landusages WHERE id=40");
     
     assertEquals(306786518, (long) result.get(0).get("osm_id"));
     assertEquals("LINESTRING(-122.399779 37.753165,-122.3995458 37.7530642)", (String) result.get(0).get("geom"));
     
     // associatedData
-    JSONArray associatedDataArray = new JSONArray((String) result.get(0).get(Main.ASSOCIATED_DATA_PROPERTY));
+    JSONArray associatedDataArray = new JSONArray((String) result.get(0).get(RoutingConstants.GRAPH_PROPERTY_NAME_ASSOCIATED_DATA));
     assertEquals(1, associatedDataArray.length());
     assertEquals(306787829, associatedDataArray.getJSONObject(0).getLong("osm_id"));
     assertNotNull(associatedDataArray.getJSONObject(0).getString("date_added"));
@@ -202,29 +196,6 @@ public class MainTest {
     assertEquals("REPROJECT_TO_DECLARED", featureType.getString("projectionPolicy"));
     assertEquals("EPSG:4326", featureType.getString("nativeCRS"));
     assertEquals(true, featureType.getBoolean("enabled"));
-  }
-
-  // TODO: move to shared library
-  private ArrayList<Map<String, Object>> executePostgisQuery(String selectSQL) throws SQLException {
-    Connection conn = DriverManager.getConnection(postgresqlContainer.getJdbcUrl(), "osm", "osm");
-    Statement statement = conn.createStatement();
-    ResultSet rs = statement.executeQuery(selectSQL);
-      
-    ResultSetMetaData md = rs.getMetaData();
-    int columns = md.getColumnCount();
-    ArrayList<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
-    while (rs.next()) {
-      HashMap<String, Object> row = new HashMap<String, Object>(columns);
-      for(int i=1; i<=columns; ++i){           
-        row.put(md.getColumnName(i),rs.getObject(i));
-      }
-      list.add(row);
-    }
-
-    statement.close();
-    rs.close();
-
-    return list;
   }
 
 }

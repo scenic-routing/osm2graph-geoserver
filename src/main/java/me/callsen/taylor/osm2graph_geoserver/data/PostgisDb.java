@@ -1,7 +1,5 @@
 package me.callsen.taylor.osm2graph_geoserver.data;
 
-import static me.callsen.taylor.osm2graph_geoserver.Main.ASSOCIATED_DATA_PROPERTY;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -14,6 +12,7 @@ import org.json.JSONObject;
 import org.neo4j.graphdb.Relationship;
 
 import me.callsen.taylor.osm2graph_geoserver.Config;
+import me.callsen.taylor.scenicrouting.javasdk.RoutingConstants;
 
 public class PostgisDb {
 
@@ -22,7 +21,7 @@ public class PostgisDb {
   private Connection conn;
 
   private String postgisUrl;
-  
+
   public PostgisDb( Config appConfig, String postgisUrl ) throws Exception {
     
     //initialize connection to Postgis Shape Source
@@ -52,7 +51,7 @@ public class PostgisDb {
       associatedDataPropertyTableName,
       this.postgisSchema,
       associatedDataPropertyTableName,
-      ASSOCIATED_DATA_PROPERTY);
+      RoutingConstants.GRAPH_PROPERTY_NAME_ASSOCIATED_DATA);
     System.out.println( String.format("table creation: %d", executeUpdate(tableSql)) );      
   }
 
@@ -75,7 +74,7 @@ public class PostgisDb {
     for (Map.Entry<String, Object> entry : rel.getAllProperties().entrySet()) {
       String propertyName = entry.getKey();
       // skip associatedData and geom properties since written on row already
-      if (propertyName.equals(ASSOCIATED_DATA_PROPERTY) || 
+      if (propertyName.equals(RoutingConstants.GRAPH_PROPERTY_NAME_ASSOCIATED_DATA) || 
           propertyName.equals(associatedDataPropertyTableName) ||  
           propertyName.equals("way")) {
         continue;
@@ -91,7 +90,7 @@ public class PostgisDb {
     String insertSql = String.format("INSERT INTO %s.%s (osm_id, geom, \"%s\", \"relationshipData\") VALUES (%s, ST_GeomFromText('%s',4326), '%s'::json, '%s'::json);", 
       this.postgisSchema,
       associatedDataPropertyTableName,
-      ASSOCIATED_DATA_PROPERTY,
+      RoutingConstants.GRAPH_PROPERTY_NAME_ASSOCIATED_DATA,
       rel_osm_id,
       wayGeometry,
       associatedDataJsonString,

@@ -10,8 +10,9 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 import me.callsen.taylor.osm2graph_geoserver.data.GeoServerRestApi;
-import me.callsen.taylor.osm2graph_geoserver.data.GraphDb;
 import me.callsen.taylor.osm2graph_geoserver.data.PostgisDb;
+import me.callsen.taylor.scenicrouting.javasdk.RoutingConstants;
+import me.callsen.taylor.scenicrouting.javasdk.data.GraphDb;
 
 public class Main {
 
@@ -21,9 +22,7 @@ public class Main {
   // keep track of which visualization tables have been created (prevent extra calls to DB)
   private static Set<String> visDataTablesCreated = new HashSet<>();
 
-  public static final int GRAPH_PAGINATION_AMOUNT = 5000;
-
-  public static final String ASSOCIATED_DATA_PROPERTY = "associatedData";
+  public static final int GRAPH_RELATIONSHIP_PAGE_SIZE = 5000;
 
   // standard entry - app config read from CONFIG_PATH and used to config objects
   public static void main(String[] args) throws Exception {
@@ -44,11 +43,11 @@ public class Main {
     // initialize GeoServer wrapper
     GeoServerRestApi geoServer = new GeoServerRestApi(appConfig); // create workspace and store
 
-    loadGeoServerData(appConfig, graphDb, postgisDb, geoServer);
+    loadGeoServerData(appConfig, graphDb, postgisDb, geoServer, GRAPH_RELATIONSHIP_PAGE_SIZE);
   }
 
   public static void loadGeoServerData(Config appConfig, GraphDb graphDb, PostgisDb postgisDb,
-      GeoServerRestApi geoServer) throws Exception {
+      GeoServerRestApi geoServer, int graphRelationshipPageSize) throws Exception {
 
     System.out.println("OSM To Geoserver (via Postgis) initialized with following parameters: ");
     System.out.println("   graphDb: " + appConfig.getString("graphDbLocation"));
@@ -56,12 +55,12 @@ public class Main {
     System.out.println(" geoserver: " + geoServer.getBaseUrl());
 
     // retrieve number of relationships
-    long wayCount = graphDb.getRelationshipCount();
+    long wayCount = graphDb.getAssociatedDataRelationshipCount();
 
-    for (int pageNumber = 0; pageNumber * GRAPH_PAGINATION_AMOUNT < wayCount; ++pageNumber) {
+    for (int pageNumber = 0; pageNumber * graphRelationshipPageSize < wayCount; ++pageNumber) {
       System.out.println(String.format("Processing page %s, up to relationship %s", pageNumber,
-          (pageNumber + 1) * GRAPH_PAGINATION_AMOUNT));
-      processRelationshipPage(appConfig, graphDb, postgisDb, pageNumber);
+          (pageNumber + 1) * graphRelationshipPageSize));
+      processRelationshipPage(appConfig, graphDb, postgisDb, pageNumber, graphRelationshipPageSize);
     }
 
     // create featureType / layer in GeoServer
@@ -78,10 +77,10 @@ public class Main {
     System.out.println("Task complete");
   }
 
-  public static void processRelationshipPage(Config appConfig, GraphDb graphDb, PostgisDb postgisDb, int pageNumber) {
+  public static void processRelationshipPage(Config appConfig, GraphDb graphDb, PostgisDb postgisDb, int pageNumber, int graphRelationshipPageSize) {
 
-    Transaction tx = graphDb.getSharedTransaction();
-    Result result = graphDb.getRelationshipPage(tx, pageNumber);
+    Transaction tx = graphDb.getTransaction();
+    Result result = graphDb.getAssociatedDataRelationshipPage(tx, pageNumber, graphRelationshipPageSize);
 
     String osmId = appConfig.getString("osmId");
 
@@ -92,7 +91,7 @@ public class Main {
 
       // loop through property names in associatedData - ensure uniqueness of property names
       Set<String> associatedDataPropertySet = new HashSet<>(
-          Arrays.asList((String[]) relationship.getProperty(ASSOCIATED_DATA_PROPERTY)));
+          Arrays.asList((String[]) relationship.getProperty(RoutingConstants.GRAPH_PROPERTY_NAME_ASSOCIATED_DATA)));
 
       for (String associatedDataProperty : associatedDataPropertySet) {
 
@@ -110,7 +109,7 @@ public class Main {
 
     }
 
-    graphDb.closeSharedTransaction();
+    tx.commit();
   }
 
 }
